@@ -1,0 +1,30 @@
+name: iOS unsigned build
+on:
+  push:
+    branches: [main, feature/meta-camera-analysis]
+  pull_request:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check imported Meta sample
+        run: |
+          test -f ios/MetaVisionAI/CameraAccess.xcodeproj/project.pbxproj || {
+            echo "CameraAccess sample has not been committed to this branch"
+            exit 1
+          }
+      - name: Show Xcode version
+        run: xcodebuild -version
+      - name: Register analysis source files
+        run: |
+          sudo gem install xcodeproj --no-document
+          ruby scripts/register_xcode_sources.rb
+      - name: Build for iOS Simulator (unsigned)
+        run: |
+          xcodebuild -project ios/MetaVisionAI/CameraAccess.xcodeproj \
+            -scheme CameraAccess \
+            -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO build

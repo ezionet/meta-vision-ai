@@ -15,8 +15,24 @@ jobs:
             echo "CameraAccess sample has not been committed to this branch"
             exit 1
           }
-      - name: Show Xcode version
-        run: xcodebuild -version
+      - name: Select compatible Xcode
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Installed Xcode versions:"
+          ls -d /Applications/Xcode*.app || true
+          candidate=$(find /Applications -maxdepth 1 -type d -name 'Xcode_26*.app' | sort -V | tail -1)
+          if [ -z "$candidate" ]; then
+            echo "::error::Xcode 26+ not installed on this runner; choose a macOS image with Xcode 26.4+."
+            exit 1
+          fi
+          sudo xcode-select -s "$candidate/Contents/Developer"
+          xcodebuild -version
+          version=$(xcodebuild -version | awk '/^Xcode / {print $2}')
+          if ! printf '%s\n%s\n' "26.4" "$version" | sort -V -C; then
+            echo "::error::Xcode 26.4+ required; found $version"
+            exit 1
+          fi
       - name: Register analysis source files
         run: |
           sudo gem install xcodeproj --no-document
